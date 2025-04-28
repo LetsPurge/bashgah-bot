@@ -1,3 +1,5 @@
+from flask import Flask
+import threading
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
@@ -89,6 +91,18 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CommandHandler("reset", reset))
 app.add_handler(CommandHandler("restart", restart))
 app.add_handler(CallbackQueryHandler(button))
+
+# --- راه اندازی سرور فیک برای Render ---
+app_web = Flask('')
+
+@app_web.route('/')
+def home():
+    return "Bashgah Bot is alive! 🚀"
+
+def run():
+    app_web.run(host='0.0.0.0', port=10000)
+
+threading.Thread(target=run).start()
 
 if __name__ == "__main__":
     app.run_polling()
