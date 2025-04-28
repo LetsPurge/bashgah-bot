@@ -1,121 +1,94 @@
-# bot.py
-
 import logging
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from telegram.ext import (
-    ApplicationBuilder, CommandHandler, CallbackQueryHandler,
-    MessageHandler, filters, ContextTypes, ConversationHandler
-)
-from config import TOKEN, CHAT_ID
-import db
-import datetime
+from telegram.ext import Application, CommandHandler, CallbackQueryHandler, ContextTypes
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+from datetime import datetime
+import pytz
+
+# --- تنظیمات ---
+TOKEN = "7899798019:AAHHLV6JTMlaLx_iWPXC-ltffu8is09w7hk"
+CHAT_ID = 1725732444  # چت آیدی خودت
+TIMEZONE = pytz.timezone("Asia/Tehran")
 
 # --- لاگ ---
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 
-# --- متغیرهای وضعیت گفتگو ---
-CHOOSING_ACTION, TYPING_VALUE = range(2)
-pending_action = None
+# --- متغیر وضعیت ---
+button_pressed_today = False
 
-# --- شروع ربات ---
-app = ApplicationBuilder().token(TOKEN).build()
+# --- دکمه ورود ---
+def get_keyboard():
+    keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
+    return InlineKeyboardMarkup(keyboard)
 
-# --- شروع کاربر ---
+# --- شروع ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_chat.id != CHAT_ID:
         return
-    db.init_db()
-    await send_table(update)
+    await update.message.reply_text("🎯 بات فعال شد و منتظر دستوراتت قهرمان!")
 
-# --- ساخت جدول ---
-async def send_table(update: Update):
-    records = db.get_all_records()
-    text = "📋 جدول ورود یا ورود 📋\n\n"
-    text += "روز هفته | وضعیت ورود | قرعه‌کشی | توضیحات\n"
-    text += "---------------------------------------------\n"
-    for rec in records:
-        text += f"{rec['day']} | {rec['status']} | {rec['lottery']} | {rec['note']}\n"
+# --- ریست دستی ---
+async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global button_pressed_today
+    if update.effective_chat.id != CHAT_ID:
+        return
+    button_pressed_today = False
+    await update.message.reply_text("🔄 ریست شد. آماده‌ی شروع روز جدید!")
 
-    keyboard = [
-        [InlineKeyboardButton("به والله که وارد شدم📿", callback_data='entered')],
-        [InlineKeyboardButton("قرعه‌کشی 🎲", callback_data='lottery')],
-        [InlineKeyboardButton("توضیح بده 📜", callback_data='note')],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(text, reply_markup=reply_markup)
+# --- ریستارت دستی (شبیه سازی) ---
+async def restart(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_chat.id != CHAT_ID:
+        return
+    await update.message.reply_text("♻️ درخواست ریست ثبت شد. لطفاً اپ رو از Render ریستارت کن.")
 
-# --- پاسخ به دکمه‌ها ---
+# --- ارسال سوال ورود ---
+async def ask_entry(context: ContextTypes.DEFAULT_TYPE):
+    global button_pressed_today
+    button_pressed_today = False
+    await context.bot.send_message(chat_id=CHAT_ID, text="❓ وارد سایت شدی؟", reply_markup=get_keyboard())
+
+# --- یادآوری ساعت 21:00 ---
+async def send_reminder(context: ContextTypes.DEFAULT_TYPE):
+    if not button_pressed_today:
+        await context.bot.send_message(chat_id=CHAT_ID, text="⏰ دِ بجنب دِ!")
+
+# --- وقتی دکمه فشرده شد ---
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global pending_action
+    global button_pressed_today
+    if update.effective_chat.id != CHAT_ID:
+        return
+
     query = update.callback_query
-    await query.answer()
+    await query.answer("🤡 باشه باشه، باور کردیم که وارد شدی")
+    await query.message.delete()
 
-    if update.effective_chat.id != CHAT_ID:
-        return
+    now = datetime.now(TIMEZONE)
+    weekday = now.weekday()  # 0=Monday, 6=Sunday
 
-    if query.data == 'entered':
-        today = get_today_name()
-        db.update_record(today, "status", "ورود انجام شد✅")
-        await query.edit_message_text("✅ ورود ثبت شد!")
-        await send_table(update)
+    if weekday in [5, 0, 2, 4]:  # شنبه، دوشنبه، چهارشنبه، جمعه
+        await context.bot.send_message(chat_id=CHAT_ID, text="🏋️‍♂️ خسته نباشی دلاور!")
+    else:  # یکشنبه، سه‌شنبه، پنجشنبه
+        await context.bot.send_message(chat_id=CHAT_ID, text="💪 خدا قوت پهلوان!")
 
-    elif query.data == 'lottery':
-        pending_action = 'lottery'
-        await query.edit_message_text("چند امتیاز؟")
+    button_pressed_today = True
 
-    elif query.data == 'note':
-        pending_action = 'note'
-        await query.edit_message_text("هرچه می‌خواهد دل تنگت بگو!")
+# --- راه‌اندازی برنامه ---
+async def post_init(application: Application):
+    scheduler = AsyncIOScheduler(timezone="Asia/Tehran")
+    scheduler.add_job(ask_entry, CronTrigger(hour=0, minute=0))
+    scheduler.add_job(send_reminder, CronTrigger(hour=21, minute=0))
+    scheduler.start()
 
-# --- گرفتن عدد یا متن بعد از دکمه‌ها ---
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global pending_action
-    if update.effective_chat.id != CHAT_ID:
-        return
+# --- اجرای اصلی ---
+app = Application.builder().token(TOKEN).post_init(post_init).build()
 
-    if pending_action == 'lottery':
-        today = get_today_name()
-        value = update.message.text.strip()
-        db.update_record(today, "lottery", f"{value} امتیاز")
-        await update.message.reply_text("🎲 قرعه‌کشی ثبت شد!")
-        await send_table(update)
-
-    elif pending_action == 'note':
-        today = get_today_name()
-        value = update.message.text.strip()
-        db.update_record(today, "note", value)
-        await update.message.reply_text("📜 توضیح ثبت شد!")
-        await send_table(update)
-
-    pending_action = None
-
-# --- دریافت نام روز جاری ---
-def get_today_name():
-    days = ["دوشنبه", "سه‌شنبه", "چهار‌شنبه", "پنج‌شنبه", "جمعه", "شنبه", "یک‌شنبه"]
-    today_idx = (datetime.datetime.today().weekday() + 1) % 7
-    return days[today_idx]
-
-# --- /help ---
-async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != CHAT_ID:
-        return
-
-    text = """🛠️ دستورات قابل استفاده:
-/start - شروع و دریافت جدول
-/help - دریافت لیست دستورات
-/history - مشاهده تاریخچه
-"""
-    await update.message.reply_text(text)
-
-# --- اضافه کردن هندلرها ---
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("help", help_command))
+app.add_handler(CommandHandler("reset", reset))
+app.add_handler(CommandHandler("restart", restart))
 app.add_handler(CallbackQueryHandler(button))
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
 
-# --- اجرا ---
 if __name__ == "__main__":
-    db.init_db()
     app.run_polling()
