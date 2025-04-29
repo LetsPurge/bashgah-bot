@@ -78,6 +78,11 @@ def webhook():
     flask_app.application.update_queue.put_nowait(update)
     return "OK"
 
+# --- health check (GET /) ---
+@flask_app.route("/", methods=["GET"])
+def index():
+    return "✅ Bashgah Bot is running!"
+
 # --- main ---
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
