@@ -59,9 +59,9 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # --- دستور start ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_chat.id != CHAT_ID:
-        return
-    await update.message.reply_text("🎯 بات فعال شد و منتظر دستوراتته قهرمان!")
+    chat_id = update.effective_chat.id
+    logging.info(f"Start command received from chat: {chat_id}")
+    await update.message.reply_text(f"Chat ID: {chat_id}")
 
 # --- reset دستی ---
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
