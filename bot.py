@@ -61,11 +61,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     logging.info(f"Start command received from chat: {chat_id}")
-    if chat_id != CHAT_ID:
-        logging.info(f"Chat ID {chat_id} does not match CHAT_ID {CHAT_ID}")
-        return
-    logging.info("Sending start response")
-    await update.message.reply_text("🎯 بات فعال شد و منتظر دستوراتته قهرمان!")
+    await update.message.reply_text(f"بات فعاله! Chat ID: {chat_id}")
 
 # --- reset دستی ---
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -83,6 +79,7 @@ def webhook():
         logging.info(f"Received update: {data}")
         update = Update.de_json(data, bot)
         if update:
+            logging.info("Processing update")
             flask_app.application.update_queue.put_nowait(update)
             logging.info("Update queued successfully")
             return "OK", 200
