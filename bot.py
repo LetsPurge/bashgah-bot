@@ -93,4 +93,6 @@ if __name__ == "__main__":
 
     flask_app.application = application
     bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
-    flask_app.run(host="0.0.0.0", port=10000)
+    port = int(os.environ.get("PORT", 10000))
+    flask_app.run(host="0.0.0.0", port=port)
+
