@@ -61,7 +61,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     logging.info(f"Start command received from chat: {chat_id}")
-    await update.message.reply_text(f"Chat ID: {chat_id}")
+    if chat_id != CHAT_ID:
+        logging.info(f"Chat ID {chat_id} does not match CHAT_ID {CHAT_ID}")
+        return
+    logging.info("Sending start response")
+    await update.message.reply_text("🎯 بات فعال شد و منتظر دستوراتته قهرمان!")
 
 # --- reset دستی ---
 async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -96,25 +100,26 @@ def index():
 # --- main ---
 if __name__ == "__main__":
     logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler('bot.log')
-    ]
-)
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler('bot.log')
+        ]
+    )
 
     scheduler.add_job(send_midnight_message, CronTrigger(hour=0, minute=0))
     scheduler.add_job(send_reminder, CronTrigger(hour=21, minute=0))
     scheduler.start()
 
     application = Application.builder().token(TOKEN).build()
+    logging.info("Application initialized")
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("reset", reset))
     application.add_handler(CallbackQueryHandler(button_handler))
+    logging.info("Handlers added")
 
     flask_app.application = application
     bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
     port = int(os.environ.get("PORT", 10000))
     flask_app.run(host="0.0.0.0", port=port)
-
