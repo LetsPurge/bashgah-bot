@@ -74,9 +74,19 @@ async def reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # --- webhook endpoint ---
 @flask_app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    flask_app.application.update_queue.put_nowait(update)
-    return "OK"
+    try:
+        data = request.get_json(force=True)
+        logging.info(f"Received update: {data}")
+        update = Update.de_json(data, bot)
+        if update:
+            flask_app.application.update_queue.put_nowait(update)
+            logging.info("Update queued successfully")
+            return "OK", 200
+        logging.warning("No valid update received")
+        return "No update data", 400
+    except Exception as e:
+        logging.error(f"Webhook error: {str(e)}")
+        return "Error processing webhook", 500
 
 # --- health check (GET /) ---
 @flask_app.route("/", methods=["GET"])
@@ -85,7 +95,14 @@ def index():
 
 # --- main ---
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler('bot.log')
+    ]
+)
 
     scheduler.add_job(send_midnight_message, CronTrigger(hour=0, minute=0))
     scheduler.add_job(send_reminder, CronTrigger(hour=21, minute=0))
