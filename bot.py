@@ -95,6 +95,8 @@ def index():
     return "✅ Bashgah Bot is running!"
 
 # --- main ---
+import asyncio
+
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.INFO,
@@ -117,6 +119,14 @@ if __name__ == "__main__":
     logging.info("Handlers added")
 
     flask_app.application = application
-    bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
+
+    # تنظیم وب‌هوک به صورت async
+    async def set_webhook():
+        await bot.set_webhook(url=f"{WEBHOOK_URL}/{TOKEN}")
+        logging.info("Webhook set successfully")
+
+    # اجرای تابع async
+    asyncio.run(set_webhook())
+
     port = int(os.environ.get("PORT", 10000))
     flask_app.run(host="0.0.0.0", port=port)
