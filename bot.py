@@ -1,6 +1,7 @@
 import os
 from flask import Flask, request
 from telegram import Bot, Update
+import json
 
 TOKEN = os.environ["BOT_TOKEN"]
 bot = Bot(token=TOKEN)
@@ -14,12 +15,21 @@ def index():
 def webhook():
     try:
         print("📥 درخواست جدید دریافت شد ✅")
-        data = request.get_data()
-        print("📦 دیتا خام:", data)
-        update = Update.de_json(request.get_json(force=True), bot)
-        print("📩 پیام جدید:", update)
+        raw_data = request.data.decode("utf-8")
+        print("📦 داده‌ی خام دریافتی:", raw_data)
+
+        data = json.loads(raw_data)
+        update = Update.de_json(data, bot)
+        print("📩 پیام دریافت‌شده:", update)
+
+        chat_id = update.message.chat.id
+        text = update.message.text
+
+        bot.send_message(chat_id=chat_id, text=f"✅ دریافت شد: {text}")
+
     except Exception as e:
-        print("❌ خطای واقعی:", repr(e))  # این دقیق خطا رو نشون میده
+        print("❌ خطای واقعی:", repr(e))
+
     return "ok"
 
 if __name__ == "__main__":
