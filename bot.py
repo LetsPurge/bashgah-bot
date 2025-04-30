@@ -12,17 +12,8 @@ def index():
 
 @flask_app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    from telegram.ext import Application
-
-app = Application.builder().token(TOKEN).build()
-
-@app.post(f"/{TOKEN}")
-async def webhook(request):
-    data = await request.get_json()
+    data = request.get_json(force=True)
     update = Update.de_json(data, bot)
-    print("📩 پیام جدید:", update)
-    return "ok"
-
     print("📩 پیام جدید:", update)
     return "ok"
 
