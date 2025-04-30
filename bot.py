@@ -64,7 +64,21 @@ def webhook():
                 status = load_status()
                 today = str(date.today())
 
-                if status["date"] == today and not status["answered"]:
+                if status["date"] != today:
+                    # یعنی پیام امروز ارسال نشده، پس الان بفرست
+                    keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
+                    msg = bot.send_message(
+                        chat_id=CHAT_ID,
+                        text="وارد سایت شدی؟ 🤔",
+                        reply_markup=InlineKeyboardMarkup(keyboard)
+                    )
+                    status["date"] = today
+                    status["answered"] = False
+                    status["message_id"] = msg.message_id
+                    save_status(status)
+
+                elif not status["answered"]:
+                     # پیام امروز ارسال شده ولی هنوز پاسخ ندادی
                     keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
                     msg = bot.send_message(
                         chat_id=CHAT_ID,
@@ -73,6 +87,7 @@ def webhook():
                     )
                     status["message_id"] = msg.message_id
                     save_status(status)
+
                 else:
                     bot.send_message(chat_id=CHAT_ID, text="امان از فراموشی 🤦‍♂️")
 
