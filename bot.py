@@ -6,6 +6,10 @@ TOKEN = os.environ["BOT_TOKEN"]
 bot = Bot(token=TOKEN)
 flask_app = Flask(__name__)
 
+@flask_app.route("/", methods=["GET"])
+def index():
+    return "✅ Bashgah Bot is running!"
+
 @flask_app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), bot)
