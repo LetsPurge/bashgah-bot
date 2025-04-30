@@ -12,11 +12,16 @@ def index():
 
 @flask_app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
-    data = request.get_json(force=True)
-    update = Update.de_json(data, bot)
-    print("📩 پیام جدید:", update)
+    try:
+        print("📥 درخواست جدید دریافت شد ✅")
+        data = request.get_json(force=True)
+        print("📦 داده‌ی دریافتی:", data)
+        update = Update.de_json(data, bot)
+        print("📩 پیام جدید:", update)
+    except Exception as e:
+        print("❌ خطا در پردازش پیام:", e)
     return "ok"
-
+    
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     flask_app.run(host="0.0.0.0", port=port)
