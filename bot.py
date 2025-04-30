@@ -14,14 +14,14 @@ def index():
 def webhook():
     try:
         print("📥 درخواست جدید دریافت شد ✅")
-        data = request.get_json(force=True)
-        print("📦 داده‌ی دریافتی:", data)
-        update = Update.de_json(data, bot)
+        data = request.get_data()
+        print("📦 دیتا خام:", data)
+        update = Update.de_json(request.get_json(force=True), bot)
         print("📩 پیام جدید:", update)
     except Exception as e:
-        print("❌ خطا در پردازش پیام:", e)
+        print("❌ خطای واقعی:", repr(e))  # این دقیق خطا رو نشون میده
     return "ok"
-    
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     flask_app.run(host="0.0.0.0", port=port)
