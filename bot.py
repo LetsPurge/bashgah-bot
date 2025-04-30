@@ -49,18 +49,18 @@ def webhook():
 
         if update.message:
             if update.message.text == "/start":
-            if active_message_id["id"]:
-        # هنوز دکمه رو نزدی → پیام با دکمه دوباره فرستاده می‌شه
-        keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
-        message = bot.send_message(
-            chat_id=CHAT_ID,
-            text="وارد سایت شدی؟ 🤔",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-        active_message_id["id"] = message.message_id
-    else:
-        # قبلاً زدی دکمه → فقط یه پیام بده
-        bot.send_message(chat_id=CHAT_ID, text="امان از فراموشی 🤦‍♂️")
+                if active_message_id["id"]:
+                    # هنوز دکمه رو نزدی → پیام با دکمه دوباره فرستاده می‌شه
+                    keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
+                    message = bot.send_message(
+                        chat_id=CHAT_ID,
+                        text="وارد سایت شدی؟ 🤔",
+                        reply_markup=InlineKeyboardMarkup(keyboard)
+                    )
+                    active_message_id["id"] = message.message_id
+                else:
+                    # قبلاً زدی دکمه → فقط یه پیام بده
+                    bot.send_message(chat_id=CHAT_ID, text="امان از فراموشی 🤦‍♂️")
 
             elif update.message.text == "/reset":
                 active_message_id["id"] = None
