@@ -1,41 +1,53 @@
 import os
 import pytz
 import json
-from datetime import datetime
+from datetime import datetime, date
 from flask import Flask, request
 from telegram import Bot, Update, InlineKeyboardButton, InlineKeyboardMarkup
 from apscheduler.schedulers.background import BackgroundScheduler
 
 TOKEN = os.environ["BOT_TOKEN"]
 CHAT_ID = int(os.environ["CHAT_ID"])
-
 bot = Bot(token=TOKEN)
 flask_app = Flask(__name__)
 scheduler = BackgroundScheduler(timezone="Asia/Tehran")
 
-active_message_id = {"id": None}
+STATUS_FILE = "status.json"
+
+def load_status():
+    try:
+        with open(STATUS_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {"date": "", "answered": False, "message_id": None}
+
+def save_status(status):
+    with open(STATUS_FILE, "w") as f:
+        json.dump(status, f)
 
 def send_daily_question():
-    try:
-        today = datetime.now(pytz.timezone("Asia/Tehran")).strftime("%A")
-        keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
-        message = bot.send_message(
-            chat_id=CHAT_ID,
-            text="وارد سایت شدی؟ 🤔",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-        active_message_id["id"] = message.message_id
-        print("📨 پیام روزانه ارسال شد")
-    except Exception as e:
-        print("❌ خطا در ارسال پیام روزانه:", e)
+    today_str = str(date.today())
+    status = {
+        "date": today_str,
+        "answered": False,
+        "message_id": None
+    }
+
+    keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
+    msg = bot.send_message(
+        chat_id=CHAT_ID,
+        text="وارد سایت شدی؟ 🤔",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    status["message_id"] = msg.message_id
+    save_status(status)
+    print("📨 پیام روزانه ارسال شد")
 
 def send_reminder():
-    if active_message_id["id"]:
-        try:
-            bot.send_message(chat_id=CHAT_ID, text="دِ بجنب دِ⏰")
-            print("⏰ یادآوری ارسال شد")
-        except Exception as e:
-            print("❌ خطا در یادآوری:", e)
+    status = load_status()
+    if status["date"] == str(date.today()) and not status["answered"]:
+        bot.send_message(chat_id=CHAT_ID, text="دِ بجنب دِ⏰")
+        print("⏰ یادآوری ارسال شد")
 
 @flask_app.route("/", methods=["GET"])
 def index():
@@ -49,33 +61,36 @@ def webhook():
 
         if update.message:
             if update.message.text == "/start":
-                if active_message_id["id"]:
-                    # هنوز دکمه رو نزدی → پیام با دکمه دوباره فرستاده می‌شه
+                status = load_status()
+                today = str(date.today())
+
+                if status["date"] == today and not status["answered"]:
                     keyboard = [[InlineKeyboardButton("به والله وارد شدم 📿", callback_data="entered")]]
-                    message = bot.send_message(
+                    msg = bot.send_message(
                         chat_id=CHAT_ID,
                         text="وارد سایت شدی؟ 🤔",
                         reply_markup=InlineKeyboardMarkup(keyboard)
                     )
-                    active_message_id["id"] = message.message_id
+                    status["message_id"] = msg.message_id
+                    save_status(status)
                 else:
-                    # قبلاً زدی دکمه → فقط یه پیام بده
                     bot.send_message(chat_id=CHAT_ID, text="امان از فراموشی 🤦‍♂️")
 
             elif update.message.text == "/reset":
-                active_message_id["id"] = None
+                save_status({"date": "", "answered": False, "message_id": None})
                 bot.send_message(chat_id=CHAT_ID, text="🔁 ریست شد.")
+
             elif update.message.text == "/restart":
-                bot.send_message(chat_id=CHAT_ID, text="♻️ راه‌اندازی مجدد")
+                bot.send_message(chat_id=CHAT_ID, text="♻️ در صورت کرش، دوباره راه‌اندازی شد.")
 
         elif update.callback_query:
             query = update.callback_query
             bot.answer_callback_query(callback_query_id=query.id, text="🤡 باشه باشه، باور کردیم که وارد شدی")
 
-            # حذف پیام قبلی
-            if active_message_id["id"]:
+            status = load_status()
+            if status["message_id"]:
                 try:
-                    bot.delete_message(chat_id=CHAT_ID, message_id=active_message_id["id"])
+                    bot.delete_message(chat_id=CHAT_ID, message_id=status["message_id"])
                 except:
                     pass
 
@@ -86,7 +101,9 @@ def webhook():
                 response = "خدا قوت پهلوان 🛡️"
 
             bot.send_message(chat_id=CHAT_ID, text=response)
-            active_message_id["id"] = None
+            status["answered"] = True
+            status["message_id"] = None
+            save_status(status)
 
     except Exception as e:
         print("❌ خطای اصلی:", repr(e))
