@@ -122,7 +122,7 @@ def webhook():
             import pytz
 
             weekday = datetime.now(pytz.timezone("Asia/Tehran")).weekday()
-            if weekday in [0, 2, 4, 5]:  # دوشنبه، چهارشنبه، جمعه، شنبه
+            if weekday in [0, 2, 5]:  # دوشنبه، چهارشنبه، جمعه، شنبه
                 response = "خسته نباشی دلاور 💪"
             else:
                 response = "خدا قوت پهلوان 🛡️"
