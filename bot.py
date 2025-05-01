@@ -105,7 +105,7 @@ def webhook():
                 bot.send_message(chat_id=CHAT_ID, text="🔁 ریست شد.")
 
             elif update.message.text == "/restart":
-                bot.send_message(chat_id=CHAT_ID, text="♻️ راه‌اندازی دوباره")
+                bot.send_message(chat_id=CHAT_ID, text="♻️ راه‌اندازی مجدد")
 
         elif update.callback_query:
             query = update.callback_query
