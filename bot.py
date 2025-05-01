@@ -53,6 +53,15 @@ def send_reminder():
 def index():
     return "✅ Bashgah Bot is running!"
 
+@flask_app.route("/reminder", methods=["GET"])
+def external_reminder():
+    from datetime import date
+    status = load_status()
+    if status["date"] == str(date.today()) and not status["answered"]:
+        bot.send_message(chat_id=CHAT_ID, text="دِ بجنب دِ⏰")
+        return "✅ Reminder sent."
+    return "No reminder needed."
+    
 @flask_app.route(f"/{TOKEN}", methods=["POST"])
 def webhook():
     try:
